@@ -9,63 +9,71 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 public class ClientConnection {
-   private static DataOutputStream outputStream;
 
-   /**
-    * @return the outputStream
-    */
-   public static DataOutputStream getOutputStream() {
-      return outputStream;
-   }
+    private final String FAIL = "nothing sent, you failed!";
+    private static DataOutputStream outputStream;
+    public final static int port = 8181;
 
-   /**
-    * @param outputStream the outputStream to set
-    * 
-    *           public static void setOutputStream(DataOutputStream outputStream) { ClientConnection.outputStream =
-    *           outputStream; }
-    * 
-    *           /**
-    * @return the inputstream
-    */
-   public static BufferedReader getInputstream() {
-      return inputstream;
-   }
+    /**
+     * @return the outputStream
+     */
+    public static DataOutputStream getOutputStream() {
+	return outputStream;
+    }
 
-   public static boolean sendtoServer(String toBeSent) {
+    /**
+     * @param outputStream
+     *            the outputStream to set
+     * 
+     *            public static void setOutputStream(DataOutputStream
+     *            outputStream) { ClientConnection.outputStream = outputStream;
+     *            }
+     * 
+     *            /**
+     * @return the inputstream
+     */
+    public static BufferedReader getInputstream() {
+	return inputstream;
+    }
 
-      try {
-         outputStream.writeUTF(toBeSent);
-      } catch (IOException e) {
-         e.printStackTrace();
-         return false;
-      }
+    public String sendtoServer(String toBeSent) {
 
-      return true;
+	try {
 
-   }
+	    outputStream.writeUTF(toBeSent);
+	    return inputstream.toString();
+	} catch (IOException e) {
+	    e.printStackTrace();
+	}
+	return FAIL;
 
-   /**
-    * @param inputstream the inputstream to set
-    */
-   public static void setInputstream(BufferedReader inputstream) {
-      ClientConnection.inputstream = inputstream;
-   }
+    }
 
-   private static BufferedReader inputstream;
+    /**
+     * @param inputstream
+     *            the inputstream to set
+     */
+    public static void setInputstream(BufferedReader inputstream) {
+	ClientConnection.inputstream = inputstream;
+    }
 
-   public static void connectToDirectoryServer() {
+    private static BufferedReader inputstream;
 
-      try {
-         Socket skt = new Socket(InetAddress.getLocalHost(), 8182);
-         outputStream = new DataOutputStream(skt.getOutputStream());
-         inputstream = new BufferedReader(new InputStreamReader(skt.getInputStream()));
+    public void connectToDirectoryServer() {
 
-      } catch (UnknownHostException e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      } catch (IOException e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      }
-   }
+	try {
+	    Socket dirSocket = new Socket(InetAddress.getLocalHost(),port);
+	    
+	    outputStream = new DataOutputStream(dirSocket.getOutputStream());
+	    inputstream = new BufferedReader(new InputStreamReader(
+		    dirSocket.getInputStream()));
+	
+	} catch (UnknownHostException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+	} catch (IOException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+	}
+    }
 }

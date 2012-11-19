@@ -9,10 +9,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class ServerMain {
+    static int port=8181;
 
    public static void main(String[] args) {
       try {
-         ServerSocket serverSkt = new ServerSocket(8182, 6, InetAddress.getLocalHost());
+         ServerSocket serverSkt = new ServerSocket(port, 6, InetAddress.getLocalHost());
          ServerConnectionThread serverThread;
 
          while (true) {
@@ -21,11 +22,12 @@ public class ServerMain {
             BufferedReader inputStream = new BufferedReader(new InputStreamReader(clientConnection.getInputStream()));
             DataOutputStream outputStream = new DataOutputStream(clientConnection.getOutputStream());
             serverThread = new ServerConnectionThread(outputStream, inputStream);
+            System.out.println("Connection to client " + clientConnection.getInetAddress() + "\n");
             serverThread.start();
          }
 
       } catch (IOException e) {
-         System.out.println("Connection Failed: 8181");
+         System.out.println("Connection Failed: "+ port);
          e.printStackTrace();
 
          // TODO must implement interaction with MySQL dp to get info about files in storage.
