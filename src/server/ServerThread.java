@@ -11,7 +11,7 @@ import java.io.PrintWriter;
  *         concurrently.
  */
 
-public class ServerConnectionThread extends Thread {
+public class ServerThread extends Thread {
     ObjectInputStream inputStream;
     ObjectOutputStream outputStream;
     PrintWriter printWriter;
@@ -19,7 +19,7 @@ public class ServerConnectionThread extends Thread {
     int queryFlag;
     String response;
 
-    public ServerConnectionThread(ObjectOutputStream out, ObjectInputStream in) {
+    public ServerThread(ObjectOutputStream out, ObjectInputStream in) {
 	inputStream = in;
 	outputStream = out;
     }

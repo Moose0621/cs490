@@ -1,22 +1,20 @@
 package client;
 
-import java.awt.BorderLayout;
-import java.awt.Frame;
-import java.awt.Panel;
-import java.awt.SystemColor;
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.Scanner;
+import java.util.Stack;
 
 import javax.swing.JOptionPane;
-import javax.swing.JRootPane;
 
+import org.apache.http.client.methods.HttpGet;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
@@ -26,50 +24,35 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 
 public class MainWindow {
 
-    private final String FAIL = "nothing sent, you failed!";
-    private static DataOutputStream outputStream;
+    private static ObjectOutputStream outputStream;
+    private static ObjectInputStream inputStream;
     public final static int port = 8181;
     StyledText consoleOut;
     private static final FormToolkit formToolkit = new FormToolkit(
 	    Display.getDefault());
-    private static Text text;
-    private static boolean connStatus = false;
     private static StyledText consoleOutput;
-
-    private static BufferedReader inputstream;
     private static Socket dirSocket;
     private static InetAddress directoryServer;
+    private static Table tblSearchResults;
+    private static int LIBRARY_SIZE = 1024;
 
     public static void close() {
 
     }
 
     /**
-     * @param outputStream
-     *            the outputStream to set
-     * 
-     *            public static void setOutputStream(DataOutputStream
-     *            outputStream) { ClientConnection.outputStream = outputStream;
-     *            }
-     * 
-     *            /**
-     * @return the inputstream
-     */
-    public static BufferedReader getInputstream() {
-	return inputstream;
-    }
-
-    /**
-     * Launch the application.
+     * Launch the client Gui, the server is launched in the main method of
+     * program execution.
      * 
      * @param args
+     * @wbp.parser.entryPoint
      */
-    public static void main(String[] args) {
+    public static void build() {
 
 	Display display = Display.getDefault();
 	Shell FileChucker = new Shell();
@@ -82,13 +65,14 @@ public class MainWindow {
 
 	MenuItem mainMenuFile = new MenuItem(menu, SWT.CASCADE);
 	mainMenuFile.setText("File");
+	HttpGet fileRequest = new HttpGet(".fileDownloadRequest");
 
-	Composite consoleComposite = new Composite(FileChucker, SWT.NONE);
-	consoleComposite.setBounds(10, 312, 661, 83);
-	formToolkit.adapt(consoleComposite);
-	formToolkit.paintBordersFor(consoleComposite);
+	Composite cmpsConsole = new Composite(FileChucker, SWT.NONE);
+	cmpsConsole.setBounds(10, 312, 661, 83);
+	formToolkit.adapt(cmpsConsole);
+	formToolkit.paintBordersFor(cmpsConsole);
 
-	consoleOutput = new StyledText(consoleComposite, SWT.BORDER);
+	consoleOutput = new StyledText(cmpsConsole, SWT.BORDER);
 	consoleOutput.setEditable(false);
 	consoleOutput.setBounds(0, 0, 668, 83);
 	formToolkit.adapt(consoleOutput);
@@ -97,60 +81,53 @@ public class MainWindow {
 	Menu menu_2 = new Menu(mainMenuFile);
 	mainMenuFile.setMenu(menu_2);
 
-	MenuItem mntmExtra = new MenuItem(menu, SWT.SEPARATOR);
-
 	MenuItem mainMenuOptions = new MenuItem(menu, SWT.CASCADE);
 	mainMenuOptions.setText("Options");
 
 	Menu menu_3 = new Menu(mainMenuOptions);
 	mainMenuOptions.setMenu(menu_3);
 
-	Composite connectionInformation = new Composite(FileChucker, SWT.NONE);
+	Composite cmpsButtonFrame = new Composite(FileChucker, SWT.NONE);
 	consoleOutput.append("Test message being sent\n");
-	connectionInformation.setBounds(10, 10, 130, 296);
+	cmpsButtonFrame.setBounds(10, 10, 169, 296);
 
-	Button connect = new Button(connectionInformation, SWT.NONE);
+	Button btnInformAndUpdate = new Button(cmpsButtonFrame, SWT.NONE);
 
-	connect.setToolTipText("Click here to Connect to Directory Server");
-	formToolkit.adapt(connect, true, true);
-	connect.setText("Connect to Server");
-	connect.addMouseListener(new MouseAdapter() {
+	btnInformAndUpdate.setToolTipText("Click here to update the Server");
+	formToolkit.adapt(btnInformAndUpdate, true, true);
+	btnInformAndUpdate.setText("Inform/Update Directory Server");
+	btnInformAndUpdate.addMouseListener(new MouseAdapter() {
 	    @Override
 	    public void mouseDown(MouseEvent e) {
 		// connStatus = true;
-		connectToDirectoryServer();
-
+		try {
+		    informAndUpdate();
+		} catch (IOException e1) {
+		    // TODO Auto-generated catch block
+		    e1.printStackTrace();
+		}
 	    }
 	});
-	connect.setBounds(0, 273, 130, 23);
+	btnInformAndUpdate.setBounds(0, 229, 169, 67);
 
-	Button serverPing = new Button(connectionInformation, SWT.NONE);
-	serverPing.setBounds(0, 242, 130, 25);
-	formToolkit.adapt(serverPing, true, true);
-	serverPing.setText("Ping Directory Server");
+	Button btnPingServer = new Button(cmpsButtonFrame, SWT.NONE);
+	btnPingServer.setBounds(0, 140, 169, 67);
+	formToolkit.adapt(btnPingServer, true, true);
+	btnPingServer.setText("Ping Directory Server");
 
-	Button closeConnection = new Button(connectionInformation, SWT.NONE);
-	closeConnection.addMouseListener(new MouseAdapter() {
+	Button btnClose = new Button(cmpsButtonFrame, SWT.NONE);
+	btnClose.addMouseListener(new MouseAdapter() {
 
 	    @Override
 	    public void mouseDown(MouseEvent e) {
 		try {
 		    if (null != dirSocket) {
-
 			if (dirSocket.isConnected()) {
-			    consoleOutput.redraw();
-			    consoleOutput.append("\nClosing Connection to: "
-				    + dirSocket);
-			    dirSocket.shutdownInput();
-			    dirSocket.shutdownOutput();
-			    dirSocket.close();
-
-			} else {
-			    consoleOutput.redraw();
-			    consoleOutput.append("No Connection to Close!!");
-			    JOptionPane.showMessageDialog(null,
-				    "NO SERVER CONNECTION!!!");
+			    outputStream.writeObject(".exit");
 			}
+		    } else {
+			JOptionPane.showMessageDialog(null,
+				"NO SERVER CONNECTION!!!");
 		    }
 		} catch (IOException e1) {
 		    // TODO Auto-generated catch block
@@ -159,50 +136,44 @@ public class MainWindow {
 	    }
 	});
 
-	closeConnection.setBounds(0, 211, 130, 25);
-	formToolkit.adapt(closeConnection, true, true);
-	closeConnection.setText("Kill");
+	btnClose.setBounds(0, 80, 169, 54);
+	formToolkit.adapt(btnClose, true, true);
+	btnClose.setText("Kill");
+
+	Button btnSearch = new Button(cmpsButtonFrame, SWT.NONE);
+	btnSearch.setBounds(0, 10, 169, 54);
+	formToolkit.adapt(btnSearch, true, true);
+	btnSearch.setText("New Button");
+
+	tblSearchResults = new Table(FileChucker, SWT.BORDER
+		| SWT.FULL_SELECTION);
+	tblSearchResults.setBounds(181, 10, 500, 235);
+	formToolkit.adapt(tblSearchResults);
+	formToolkit.paintBordersFor(tblSearchResults);
+	tblSearchResults.setHeaderVisible(true);
+	tblSearchResults.setLinesVisible(true);
 	// consoleOut.append("\nNo connection, no test message sent");
 
-	serverPing.addMouseListener(new MouseAdapter() {
+	btnPingServer.addMouseListener(new MouseAdapter() {
 
 	    @Override
 	    public void mouseDown(MouseEvent e) {
-		consoleOutput.append("\ntest message to server!!\n");
+		consoleOutput.append("\nTest message to server!!\n");
 		try {
 		    if (null != dirSocket) {
 			outputStream.writeUTF("Hola There!");
-			consoleOutput.append(inputstream.readLine());
+			consoleOutput.append(inputStream.readLine());
 		    } else
 			consoleOutput.append("No Server connection");
 
 		} catch (IOException e1) {
-		    consoleOutput.append("\nNo Server to connect To");
+		    JOptionPane.showMessageDialog(null,
+			    "\nNo Server to connect To");
 		    e1.printStackTrace();
 		}
 
 	    }
 	});
-
-	Composite fileXferInfo = new Composite(FileChucker, SWT.EMBEDDED);
-	fileXferInfo.setBounds(141, 10, 538, 296);
-	formToolkit.adapt(fileXferInfo);
-	formToolkit.paintBordersFor(fileXferInfo);
-
-	Frame frame = SWT_AWT.new_Frame(fileXferInfo);
-
-	Panel panel = new Panel();
-	frame.add(panel);
-	panel.setLayout(new BorderLayout(0, 0));
-
-	JRootPane rootPane = new JRootPane();
-	rootPane.getContentPane()
-		.setBackground(SystemColor.inactiveCaptionText);
-	panel.add(rootPane);
-
-	text = new Text(fileXferInfo, SWT.BORDER);
-	text.setBounds(55, 98, 205, 59);
-	formToolkit.adapt(text, true, true);
 
 	FileChucker.open();
 	FileChucker.layout();
@@ -213,45 +184,36 @@ public class MainWindow {
 	}
     }
 
-    public static boolean connectToDirectoryServer() {
+    // This method will provide
+    public static void informAndUpdate() throws IOException {
+	byte[] sendData = new byte[LIBRARY_SIZE];
+	Scanner scan = new Scanner(new FileReader("library.txt"));
+	Stack<Byte> scanBytes = new Stack<Byte>();
+	LibraryMaker.scan();
+	DatagramPacket udpReciept = null;
+	// this will be where we hardcode the server address
+	directoryServer = InetAddress.getLocalHost();
+	DatagramSocket clientSocket = new DatagramSocket();
+	boolean directoryAck = true;
 
-	try {
-	    // this will be where we hardcode the server address
-	    directoryServer = InetAddress.getLocalHost();
-	    consoleOutput.redraw();
-	    consoleOutput.append("\nTrying to connect to: " + directoryServer);
-	    dirSocket = new Socket(directoryServer, port);
-
-	    outputStream = new DataOutputStream(dirSocket.getOutputStream());
-	    inputstream = new BufferedReader(new InputStreamReader(
-		    dirSocket.getInputStream()));
-
-	} catch (UnknownHostException e) {
-	    // TODO Auto-generated catch block
-
-	    return false;
-	} catch (IOException e) {
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	    return false;
+	// scan and store the txt file into a byte stack which will grow to suit
+	// a variety of size libraries.
+	for (int i = 0; scan.hasNextByte(); i++) {
+	    sendData[i] = scan.nextByte();
 	}
-	consoleOutput.redraw();
-	consoleOutput.append("\nConnected to : " + dirSocket);
-	return true;
-    }
 
-    public StyledText getConsoleOut() {
-	return consoleOutput;
-    }
+	// store library size to verify receipt from server.
+	int librarySize = sendData.length;
 
-    public String sendtoServer(String toBeSent) {
+	DatagramPacket sendPacket = new DatagramPacket(sendData, 128,
+		sendData.length, InetAddress.getLocalHost(), 8181);
 
-	try {
-	    outputStream.writeUTF(toBeSent);
-	    return inputstream.toString();
-	} catch (IOException e) {
-	    e.printStackTrace();
-	    return FAIL;
+	clientSocket.send(sendPacket);
+	clientSocket.receive(udpReciept);
+
+	if (null != udpReciept && udpReciept.getData().equals(sendData)) {
+	    ;
+	    JOptionPane.showMessageDialog(null, "SUCCESS!!");
 	}
     }
 }

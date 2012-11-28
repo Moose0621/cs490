@@ -16,7 +16,7 @@ public class ServerMain {
 	try {
 	    ServerSocket serverSkt = new ServerSocket(port, 6,
 		    InetAddress.getLocalHost());
-	    ServerConnectionThread serverThread;
+	    ServerThread serverThread;
 
 	    while (true) {
 		System.out.println("Listening for Connection on port: "
@@ -26,7 +26,7 @@ public class ServerMain {
 			clientConnection.getInputStream());
 		outputStream = new ObjectOutputStream(
 			clientConnection.getOutputStream());
-		serverThread = new ServerConnectionThread(outputStream,
+		serverThread = new ServerThread(outputStream,
 			inputStream);
 		System.out.println("Connection to client "
 			+ clientConnection.getInetAddress() + "\n");
