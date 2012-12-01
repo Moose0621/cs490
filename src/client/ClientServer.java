@@ -21,7 +21,7 @@ public class ClientServer {
 			clientSocket.getOutputStream());
 		ObjectInputStream input = new ObjectInputStream(
 			clientSocket.getInputStream());
-
+		// create a thread start for client server here
 	    }
 	} catch (Exception e) {
 	    e.printStackTrace();
@@ -29,9 +29,8 @@ public class ClientServer {
     }
 
     public static HttpGet getMp3(String fileName) {
-	HttpGet clientGetRequest = new HttpGet()
-	clientGetRequest.addHeader(name, value)
-	
+	HttpGet clientGetRequest = new HttpGet();
+
 	return clientGetRequest;
     }
 }

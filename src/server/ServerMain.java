@@ -14,7 +14,7 @@ public class ServerMain {
     static int port = 8181;
     static ObjectInputStream inputStream;
     static ObjectOutputStream outputStream;
-    public static udpServerThread udpServer = new udpServerThread();
+    public static udpServerThread udpServer;
 
     public static void main(String[] args) {
 	ServerThread serverThread;
