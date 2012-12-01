@@ -186,11 +186,13 @@ public class MainWindow {
 
     // This method will provide
     public static void informAndUpdate() throws IOException {
+
 	byte[] sendData = new byte[LIBRARY_SIZE];
 	Scanner scan = new Scanner(new FileReader("library.txt"));
 	Stack<Byte> scanBytes = new Stack<Byte>();
 	LibraryMaker.scan();
 	DatagramPacket udpReciept = null;
+
 	// this will be where we hardcode the server address
 	directoryServer = InetAddress.getLocalHost();
 	DatagramSocket clientSocket = new DatagramSocket();

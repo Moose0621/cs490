@@ -5,6 +5,8 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import org.apache.http.client.methods.HttpGet;
+
 public class ClientServer {
 
     public static void launch() {
@@ -24,5 +26,12 @@ public class ClientServer {
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}
+    }
+
+    public static HttpGet getMp3(String fileName) {
+	HttpGet clientGetRequest = new HttpGet()
+	clientGetRequest.addHeader(name, value)
+	
+	return clientGetRequest;
     }
 }
