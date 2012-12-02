@@ -8,12 +8,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Stack;
 
 import javax.swing.JOptionPane;
 
-import org.apache.http.HttpResponseFactory;
 import org.apache.http.client.methods.HttpGet;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
@@ -191,39 +191,60 @@ public class MainWindow {
     @SuppressWarnings("unused")
     public static void informAndUpdate() throws IOException {
 	int offset = 128;
-	byte[] sendData = new byte[LIBRARY_SIZE];
+	byte[] sendData;
+	ArrayList<String> temp = new ArrayList<String>();
 	LibraryMaker.scan();
-	Scanner scan = new Scanner(new FileReader("library.txt"));
 	Stack<Byte> scanBytes = new Stack<Byte>();
-	byte[] rcvData = new byte[1024];
+	Scanner scan = new Scanner(new FileReader("library.txt"));
+	byte[] rcvData = new byte[4096];
 	DatagramPacket udpReciept = new DatagramPacket(rcvData, offset);
 
 	// this will be where we hardcode the server address
 	directoryServer = InetAddress.getLocalHost();
-	DatagramSocket clientSocket = new DatagramSocket(8181);
+	final int infoPort = 8185;
+	DatagramSocket clientSocket = new DatagramSocket(infoPort);
 	boolean directoryAck = true;
 
 	// scan and store the txt file into a byte stack which will grow to suit
 	// a variety of size libraries.
-	for (int i = 0; scan.hasNextByte(); i++) {
-	    sendData[i] = scan.nextByte();
+	for (int i = 0; scan.hasNext(); i++) {
+	    temp.add(scan.next());
 	}
-
+	byte[] tempf = new byte[128];
+	sendData = new byte[temp.toString().getBytes().length];
+	sendData = temp.toString().getBytes();
 	// store library size to verify receipt from server.
 	int librarySize = sendData.length;
+	// while (directoryAck) {
+
 	for (int i = 0; i < librarySize; i += 128) {
+	    consoleOutput.append("\nPushing bytes: " + i
+		    + " then some others!!");
+	    for (int j = 0; j < 127 || j + i < librarySize; j++) {
+		tempf[j] = sendData[i + j];
 
-	    DatagramPacket sendPacket = new DatagramPacket(sendData, i, 128,
-		    InetAddress.getLocalHost(), 8181);
+	    }
+	    DatagramPacket sendPacket = new DatagramPacket(tempf, i, offset,
+		    InetAddress.getLocalHost(), 8182);
 	    clientSocket.send(sendPacket);
-
 	}
-	HttpResponseFactory response;
+
+	// HttpResponseFactory response;
+	// Reciept of UDP response from directory server confirming that client
+	// can send search inqueries.
+
 	clientSocket.receive(udpReciept);
-	if (null != udpReciept) {
+	if (null != udpReciept && udpReciept.getData().equals("^Success")) {
 
-	    JOptionPane.showMessageDialog(null, "SUCCESS!!");
+	    JOptionPane.showMessageDialog(null, "SUCCESS!! \n " + udpReciept
+		    + "\n" + udpReciept.getData() + "\n"
+		    + udpReciept.getData().toString());
+	} else {
+
+	    JOptionPane.showMessageDialog(null,
+		    "You Failed....\nTry again fuck ass!!!\n"
+			    + udpReciept.getData().toString());
+	    clientSocket.close();
 	}
-	clientSocket.close();
     }
 }

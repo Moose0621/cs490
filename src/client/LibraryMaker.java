@@ -22,6 +22,7 @@ public class LibraryMaker {
 	    outputFile.println(libraryItems.get(i));
 	}
 	outputFile.close();
+
 	// return outputFile;
     }
 
@@ -32,6 +33,7 @@ public class LibraryMaker {
 	    if (dirContents[i].isDirectory())
 		getDirContents(dirContents[i].toString());
 	    else if (dirContents[i].toString().endsWith(".mp3")) {
+		// String add = dirContents[i].toString();
 		libraryItems
 			.add((dirContents[i].toString() + "\t"
 				+ InetAddress.getLocalHost().toString() + "test data to add"));
