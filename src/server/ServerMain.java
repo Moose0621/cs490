@@ -1,77 +1,101 @@
 package server;
 
-import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServerMain {
+
     static int port = 8181;
+    FileWriter fileOut;
     static ObjectInputStream inputStream;
     static ObjectOutputStream outputStream;
+    public static DatagramPacket rcvPkt = null;
     public static udpServerThread udpServer;
 
     public static void main(String[] args) {
-	ServerThread serverThread;
-	new File("directory.txt");
 
 	try {
-	    byte[] buf = new byte[128];
-	    ServerSocket serverSkt = new ServerSocket(port, 6,
-		    InetAddress.getLocalHost());
+	    byte[] buf = new byte[1024];
 
+	    DatagramSocket udpSocket = new DatagramSocket(8181);
+	    rcvPkt = new DatagramPacket(buf, buf.length);
+	    byte[] data = new byte[1024];
 	    // udpServerThread.start();
 	    while (true) {
-		Socket clientConnection = serverSkt.accept();
-		inputStream = new ObjectInputStream(
-			clientConnection.getInputStream());
-		outputStream = new ObjectOutputStream(
-			clientConnection.getOutputStream());
-		serverThread = new ServerThread(outputStream, inputStream);
-		System.out.println("Connection to client "
-			+ clientConnection.getInetAddress() + "\n");
-		udpServer.start();
-		serverThread.start();
+		udpSocket.receive(rcvPkt);
+		new Thread(new udpResponse(udpSocket, rcvPkt)).start();
+
+		// DatagramPacket response = new DatagramPacket(data,
+		// data.length,
+		// packet.getAddress(), packet.getPort());
+		// socket.send(response);
+		// udpSocket.udpServer.start();
 	    }
 
 	} catch (IOException e) {
 	    System.out.println("Connection Failed: " + port);
 	    e.printStackTrace();
 
-	    // TODO must implement interaction with MySQL dp to get info about
-	    // files in storage.
-
-	    // TODO Only GET request needs to be implemented. The URL field in
-	    // GET method contains the name of the
-	    // requested file;
-
 	}
     }
 
     class udpServerThread extends Thread {
 
-	DatagramSocket udpSkt;
-	byte[] buf = new byte[128];
+	List<byte[]> data = new ArrayList<byte[]>();
 
-	public udpServerThread() throws Exception {
-	    udpSkt = new DatagramSocket(8181);
+	public udpServerThread(DatagramPacket sentInfo) throws Exception {
+	    if (null != sentInfo) {
+		data.add(sentInfo.getData());
+	    }
 	}
 
 	public void run() {
+	    try {
+		fileOut = new FileWriter("directory.txt");
+	    } catch (IOException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	    }
 	    while (true) {
-		DatagramPacket packet = new DatagramPacket(buf, 128, buf.length);
 		try {
-		    udpSkt.receive(packet);
+		    CharSequence csq = data.toString();
+		    fileOut.append(csq);
+		    fileOut.close();
 		} catch (IOException e) {
 		    // TODO Auto-generated catch block
 		    e.printStackTrace();
+
 		}
 	    }
+	}
+    }
+}
+
+class udpResponse implements Runnable {
+
+    DatagramSocket socket = null;
+    DatagramPacket packet = null;
+
+    public udpResponse(DatagramSocket socket, DatagramPacket packet) {
+	this.socket = socket;
+	this.packet = packet;
+    }
+
+    public void run() {
+	byte[] data = "Success".getBytes(); // code not shown
+	DatagramPacket response = new DatagramPacket(data, data.length,
+		packet.getAddress(), packet.getPort());
+	try {
+	    socket.send(response);
+	} catch (IOException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
 	}
     }
 }

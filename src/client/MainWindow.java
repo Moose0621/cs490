@@ -13,6 +13,7 @@ import java.util.Stack;
 
 import javax.swing.JOptionPane;
 
+import org.apache.http.HttpResponseFactory;
 import org.apache.http.client.methods.HttpGet;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
@@ -184,18 +185,22 @@ public class MainWindow {
 	}
     }
 
-    // This method will provide
-    public static void informAndUpdate() throws IOException {
+    // This method will provide shoot a UDP datagram to the directory server to
+    // let them know they are open for business.
 
+    @SuppressWarnings("unused")
+    public static void informAndUpdate() throws IOException {
+	int offset = 128;
 	byte[] sendData = new byte[LIBRARY_SIZE];
+	LibraryMaker.scan();
 	Scanner scan = new Scanner(new FileReader("library.txt"));
 	Stack<Byte> scanBytes = new Stack<Byte>();
-	LibraryMaker.scan();
-	DatagramPacket udpReciept = null;
+	byte[] rcvData = new byte[1024];
+	DatagramPacket udpReciept = new DatagramPacket(rcvData, offset);
 
 	// this will be where we hardcode the server address
 	directoryServer = InetAddress.getLocalHost();
-	DatagramSocket clientSocket = new DatagramSocket();
+	DatagramSocket clientSocket = new DatagramSocket(8181);
 	boolean directoryAck = true;
 
 	// scan and store the txt file into a byte stack which will grow to suit
@@ -206,16 +211,19 @@ public class MainWindow {
 
 	// store library size to verify receipt from server.
 	int librarySize = sendData.length;
+	for (int i = 0; i < librarySize; i += 128) {
 
-	DatagramPacket sendPacket = new DatagramPacket(sendData, 128,
-		sendData.length, InetAddress.getLocalHost(), 8181);
+	    DatagramPacket sendPacket = new DatagramPacket(sendData, i, 128,
+		    InetAddress.getLocalHost(), 8181);
+	    clientSocket.send(sendPacket);
 
-	clientSocket.send(sendPacket);
+	}
+	HttpResponseFactory response;
 	clientSocket.receive(udpReciept);
+	if (null != udpReciept) {
 
-	if (null != udpReciept && udpReciept.getData().equals(sendData)) {
-	    ;
 	    JOptionPane.showMessageDialog(null, "SUCCESS!!");
 	}
+	clientSocket.close();
     }
 }
