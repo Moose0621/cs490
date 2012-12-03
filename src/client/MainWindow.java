@@ -8,9 +8,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
-import java.util.Stack;
 
 import javax.swing.JOptionPane;
 
@@ -100,13 +101,7 @@ public class MainWindow {
 	btnInformAndUpdate.addMouseListener(new MouseAdapter() {
 	    @Override
 	    public void mouseDown(MouseEvent e) {
-		// connStatus = true;
-		try {
-		    informAndUpdate();
-		} catch (IOException e1) {
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
-		}
+		informAndUpdate();
 	    }
 	});
 	btnInformAndUpdate.setBounds(0, 229, 169, 67);
@@ -189,62 +184,64 @@ public class MainWindow {
     // let them know they are open for business.
 
     @SuppressWarnings("unused")
-    public static void informAndUpdate() throws IOException {
-	int offset = 128;
-	byte[] sendData;
-	ArrayList<String> temp = new ArrayList<String>();
-	LibraryMaker.scan();
-	Stack<Byte> scanBytes = new Stack<Byte>();
-	Scanner scan = new Scanner(new FileReader("library.txt"));
-	byte[] rcvData = new byte[4096];
-	DatagramPacket udpReciept = new DatagramPacket(rcvData, offset);
-
-	// this will be where we hardcode the server address
-	directoryServer = InetAddress.getLocalHost();
-	final int infoPort = 8185;
-	DatagramSocket clientSocket = new DatagramSocket(infoPort);
+    public static void informAndUpdate() {
 	boolean directoryAck = true;
-
-	// scan and store the txt file into a byte stack which will grow to suit
-	// a variety of size libraries.
-	for (int i = 0; scan.hasNext(); i++) {
-	    temp.add(scan.next());
-	}
+	byte[] rcvData = new byte[4096];
+	byte[] sendData;
 	byte[] tempf = new byte[128];
-	sendData = new byte[temp.toString().getBytes().length];
-	sendData = temp.toString().getBytes();
-	// store library size to verify receipt from server.
-	int librarySize = sendData.length;
-	// while (directoryAck) {
+	final int infoPort = 8185;
+	int offset = 128;
+	try {
+	    LibraryMaker.scan();
+	    // Stack<Byte> scanBytes = new Stack<Byte>();
+	    Scanner scan = new Scanner(new FileReader("library.txt"));
+	    DatagramPacket udpReciept = new DatagramPacket(rcvData, offset);
+	    Path path = Paths.get("library.txt");
+	    byte[] scanBytes = Files.readAllBytes(path);
+	    // this will be where we hardcode the server address
+	    directoryServer = InetAddress.getLocalHost();
+	    DatagramSocket clientSocket = new DatagramSocket(infoPort);
 
-	for (int i = 0; i < librarySize; i += 128) {
-	    consoleOutput.append("\nPushing bytes: " + i
-		    + " then some others!!");
-	    for (int j = 0; j < 127 || j + i < librarySize; j++) {
-		tempf[j] = sendData[i + j];
+	    // scan and store the txt file into a byte stack which will grow to
+	    // suit
+	    // a variety of size libraries.
+	    // store library size to verify receipt from server.
+	    // while (directoryAck) {
 
+	    for (int i = 0; i < scanBytes.length; i += 128) {
+		consoleOutput.append("\nPushing bytes: " + i
+			+ " then some others!!");
+		for (int j = 0; (j > 127) || (j + i > scanBytes.length); j++) {
+		    tempf[j] = scanBytes[i + j];
+
+		}
+		DatagramPacket sendPacket = new DatagramPacket(tempf, offset,
+			InetAddress.getLocalHost(), 8182);
+		clientSocket.send(sendPacket);
 	    }
-	    DatagramPacket sendPacket = new DatagramPacket(tempf, i, offset,
-		    InetAddress.getLocalHost(), 8182);
-	    clientSocket.send(sendPacket);
-	}
 
-	// HttpResponseFactory response;
-	// Reciept of UDP response from directory server confirming that client
-	// can send search inqueries.
+	    // HttpResponseFactory response;
+	    // Reciept of UDP response from directory server confirming that
+	    // client
+	    // can send search inqueries.
+	    clientSocket.setSoTimeout(6000);
+	    clientSocket.receive(udpReciept);
+	    if (null != udpReciept && udpReciept.getData().equals("^Success")) {
 
-	clientSocket.receive(udpReciept);
-	if (null != udpReciept && udpReciept.getData().equals("^Success")) {
+		JOptionPane.showMessageDialog(null, "SUCCESS!! \n "
+			+ udpReciept + "\n" + udpReciept.getData() + "\n"
+			+ udpReciept.getData().toString());
+	    } else {
 
-	    JOptionPane.showMessageDialog(null, "SUCCESS!! \n " + udpReciept
-		    + "\n" + udpReciept.getData() + "\n"
-		    + udpReciept.getData().toString());
-	} else {
-
-	    JOptionPane.showMessageDialog(null,
-		    "You Failed....\nTry again fuck ass!!!\n"
-			    + udpReciept.getData().toString());
-	    clientSocket.close();
+		JOptionPane.showMessageDialog(null,
+			"You Failed....\nTry again fuck ass!!!\n"
+				+ udpReciept.getData().toString());
+		clientSocket.close();
+	    }
+	} catch (IOException e) {
+	    // TODO Auto-generated catch block
+	    JOptionPane
+		    .showMessageDialog(null, "Server Timeout, \nTry again!!");
 	}
     }
 }
